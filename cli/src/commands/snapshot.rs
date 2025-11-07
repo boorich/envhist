@@ -1,28 +1,39 @@
 use crate::daemon_client;
+use crate::SnapshotArgs;
 use anyhow::Result;
 use chrono::Utc;
-use envhist_core::{session::Session, storage::Snapshot, storage::Storage};
+use envhist_core::{storage::Snapshot, storage::Storage};
 
-fn current_session() -> Option<Session> {
-    daemon_client::get_active_session().ok().flatten()
+fn current_session_id() -> Option<uuid::Uuid> {
+    daemon_client::get_active_session()
+        .ok()
+        .flatten()
+        .map(|s| s.id)
 }
 
-pub fn snapshot(name: Option<String>, description: Option<String>) -> Result<()> {
+pub fn snapshot(args: SnapshotArgs) -> Result<()> {
     let storage = Storage::new()?;
     let current_env = Storage::get_current_env();
 
-    let snapshot_name =
-        name.unwrap_or_else(|| format!("snapshot-{}", Utc::now().format("%Y%m%d-%H%M%S")));
+    let snapshot_name = args
+        .name
+        .unwrap_or_else(|| format!("snapshot-{}", Utc::now().format("%Y%m%d-%H%M%S")));
 
-    let session = current_session();
+    let session_id = args.session.then(|| current_session_id()).flatten();
 
     let snapshot = Snapshot {
         name: snapshot_name.clone(),
         created_at: Utc::now(),
-        description,
+        description: args.description,
         environment: current_env,
         tags: Vec::new(),
-        session_id: session.as_ref().map(|s| s.id),
+        session_id,
+    };
+
+    let session = if args.session {
+        daemon_client::get_active_session().ok().flatten()
+    } else {
+        None
     };
 
     storage.save_snapshot(&snapshot, session.as_ref())?;
@@ -33,8 +44,13 @@ pub fn snapshot(name: Option<String>, description: Option<String>) -> Result<()>
 
 pub fn list() -> Result<()> {
     let storage = Storage::new()?;
-    let session = current_session();
-    let snapshots = storage.list_snapshots(session.as_ref())?;
+    let session = daemon_client::get_active_session().ok().flatten();
+    let mut snapshots = storage.list_snapshots(None)?;
+
+    if let Some(ref sess) = session {
+        let mut session_snaps = storage.list_snapshots(Some(sess))?;
+        snapshots.extend(session_snaps.drain(..));
+    }
 
     if snapshots.is_empty() {
         println!("No snapshots found.");
@@ -44,9 +60,13 @@ pub fn list() -> Result<()> {
     println!("Snapshots:");
     for snap in snapshots {
         let session_info = if let Some(sid) = snap.session_id {
-            format!(" (session: {})", sid)
+            if Some(sid) == session.as_ref().map(|s| s.id) {
+                " (this session)".to_string()
+            } else {
+                format!(" (session: {})", sid)
+            }
         } else {
-            String::new()
+            " (global)".to_string()
         };
 
         let desc = snap
@@ -69,8 +89,11 @@ pub fn list() -> Result<()> {
 
 pub fn restore(name: String, dry_run: bool) -> Result<()> {
     let storage = Storage::new()?;
-    let session = current_session();
-    let snapshot = storage.load_snapshot(&name, session.as_ref())?;
+    let session = daemon_client::get_active_session().ok().flatten();
+    let snapshot = match storage.load_snapshot(&name, None) {
+        Ok(global) => global,
+        Err(_) => storage.load_snapshot(&name, session.as_ref())?,
+    };
 
     if dry_run {
         println!("Would restore snapshot: {}", name);
@@ -95,8 +118,12 @@ pub fn restore(name: String, dry_run: bool) -> Result<()> {
 
 pub fn delete(name: String) -> Result<()> {
     let storage = Storage::new()?;
-    let session = current_session();
-    storage.delete_snapshot(&name, session.as_ref())?;
+    let session = daemon_client::get_active_session().ok().flatten();
+
+    if storage.delete_snapshot(&name, None).is_err() {
+        storage.delete_snapshot(&name, session.as_ref())?;
+    }
+
     println!("✓ Deleted snapshot: {}", name);
 
     Ok(())

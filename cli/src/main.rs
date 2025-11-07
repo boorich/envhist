@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 
 mod commands;
 mod daemon_client;
@@ -22,13 +22,7 @@ enum Commands {
         check: bool,
     },
     /// Save current environment as a snapshot
-    Snapshot {
-        /// Snapshot name (auto-generated if not provided)
-        name: Option<String>,
-        /// Description
-        #[arg(short, long)]
-        description: Option<String>,
-    },
+    Snapshot(SnapshotArgs),
     /// List all snapshots
     List,
     /// Restore a snapshot
@@ -102,7 +96,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Init { check } => commands::init::init(check),
-        Commands::Snapshot { name, description } => commands::snapshot::snapshot(name, description),
+        Commands::Snapshot(args) => commands::snapshot::snapshot(args),
         Commands::List => commands::snapshot::list(),
         Commands::Restore { name, dry_run } => commands::snapshot::restore(name, dry_run),
         Commands::Delete { name } => commands::snapshot::delete(name),
@@ -123,4 +117,17 @@ fn main() -> Result<()> {
         Commands::SendUnset { pid, key } => commands::init::send_unset(pid, key),
         Commands::SendCapture { pid } => commands::init::send_capture(pid),
     }
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct SnapshotArgs {
+    /// Snapshot name (auto-generated if not provided)
+    #[arg()]
+    pub name: Option<String>,
+    /// Description for the snapshot
+    #[arg(short, long)]
+    pub description: Option<String>,
+    /// Store snapshot only for the current session
+    #[arg(long)]
+    pub session: bool,
 }
