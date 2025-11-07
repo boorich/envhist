@@ -45,12 +45,21 @@ pub fn snapshot(args: SnapshotArgs) -> Result<()> {
 pub fn list() -> Result<()> {
     let storage = Storage::new()?;
     let session = daemon_client::get_active_session().ok().flatten();
-    let mut snapshots = storage.list_snapshots(None)?;
+    let mut merged: std::collections::BTreeMap<String, Snapshot> =
+        std::collections::BTreeMap::new();
+
+    for snap in storage.list_snapshots(None)? {
+        merged.insert(snap.name.clone(), snap);
+    }
 
     if let Some(ref sess) = session {
-        let mut session_snaps = storage.list_snapshots(Some(sess))?;
-        snapshots.extend(session_snaps.drain(..));
+        for snap in storage.list_snapshots(Some(sess))? {
+            merged.insert(snap.name.clone(), snap);
+        }
     }
+
+    let mut snapshots: Vec<_> = merged.into_values().collect();
+    snapshots.sort_by(|a, b| b.created_at.cmp(&a.created_at));
 
     if snapshots.is_empty() {
         println!("No snapshots found.");
