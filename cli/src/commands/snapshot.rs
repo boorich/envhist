@@ -1,6 +1,12 @@
+use crate::daemon_client;
 use anyhow::Result;
 use chrono::Utc;
-use envhist_core::{storage::Snapshot, storage::Storage};
+use envhist_core::{session::Session, storage::Snapshot, storage::Storage};
+use std::process;
+
+fn current_session() -> Option<Session> {
+    daemon_client::get_session(process::id()).ok().flatten()
+}
 
 pub fn snapshot(name: Option<String>, description: Option<String>) -> Result<()> {
     let storage = Storage::new()?;
@@ -9,16 +15,18 @@ pub fn snapshot(name: Option<String>, description: Option<String>) -> Result<()>
     let snapshot_name =
         name.unwrap_or_else(|| format!("snapshot-{}", Utc::now().format("%Y%m%d-%H%M%S")));
 
+    let session = current_session();
+
     let snapshot = Snapshot {
         name: snapshot_name.clone(),
         created_at: Utc::now(),
         description,
         environment: current_env,
         tags: Vec::new(),
-        session_id: None,
+        session_id: session.as_ref().map(|s| s.id),
     };
 
-    storage.save_snapshot(&snapshot, None)?;
+    storage.save_snapshot(&snapshot, session.as_ref())?;
     println!("✓ Saved snapshot: {}", snapshot_name);
 
     Ok(())
@@ -26,7 +34,8 @@ pub fn snapshot(name: Option<String>, description: Option<String>) -> Result<()>
 
 pub fn list() -> Result<()> {
     let storage = Storage::new()?;
-    let snapshots = storage.list_snapshots(None)?;
+    let session = current_session();
+    let snapshots = storage.list_snapshots(session.as_ref())?;
 
     if snapshots.is_empty() {
         println!("No snapshots found.");
@@ -61,7 +70,8 @@ pub fn list() -> Result<()> {
 
 pub fn restore(name: String, dry_run: bool) -> Result<()> {
     let storage = Storage::new()?;
-    let snapshot = storage.load_snapshot(&name, None)?;
+    let session = current_session();
+    let snapshot = storage.load_snapshot(&name, session.as_ref())?;
 
     if dry_run {
         println!("Would restore snapshot: {}", name);
@@ -86,7 +96,8 @@ pub fn restore(name: String, dry_run: bool) -> Result<()> {
 
 pub fn delete(name: String) -> Result<()> {
     let storage = Storage::new()?;
-    storage.delete_snapshot(&name, None)?;
+    let session = current_session();
+    storage.delete_snapshot(&name, session.as_ref())?;
     println!("✓ Deleted snapshot: {}", name);
 
     Ok(())

@@ -1,3 +1,4 @@
+use crate::daemon_client;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use envhist_core::{session::Session, storage::Storage, storage::TimelineEntry};
@@ -110,7 +111,11 @@ pub fn show(var_name: String) -> Result<()> {
 }
 
 fn get_session_for_pid(pid: u32) -> Result<Session> {
-    // Try to find session in storage
+    if let Ok(Some(session)) = daemon_client::get_session(pid) {
+        return Ok(session);
+    }
+
+    // Fallback: try to find session metadata manually
     let sessions_dir = envhist_core::Config::sessions_dir();
     if sessions_dir.exists() {
         for entry in std::fs::read_dir(&sessions_dir)? {
@@ -129,7 +134,7 @@ fn get_session_for_pid(pid: u32) -> Result<Session> {
         }
     }
 
-    // Create temporary session
+    // Create temporary session if nothing else worked
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "unknown".to_string());
     Ok(Session::new(pid, shell))
 }

@@ -158,17 +158,20 @@ pub fn daemon_status() -> Result<()> {
 
 pub fn send_set(pid: u32, key: String, value: String) -> Result<()> {
     let event = EnvEvent::Set { pid, key, value };
-    daemon_client::send_event(event)
+    let _ = daemon_client::send_event(event)?;
+    Ok(())
 }
 
 pub fn send_unset(pid: u32, key: String) -> Result<()> {
     let event = EnvEvent::Unset { pid, key };
-    daemon_client::send_event(event)
+    let _ = daemon_client::send_event(event)?;
+    Ok(())
 }
 
 pub fn send_capture(pid: u32) -> Result<()> {
     use envhist_core::Env;
     let env: Env = std::env::vars().collect();
     let event = EnvEvent::Capture { pid, env };
-    daemon_client::send_event(event)
+    let _ = daemon_client::send_event(event)?;
+    Ok(())
 }

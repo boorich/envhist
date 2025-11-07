@@ -34,7 +34,7 @@ pub enum EnvEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EnvResponse {
     Ok,
-    Session { session_id: String },
+    Session { session: Session },
     Error { message: String },
 }
 
@@ -224,9 +224,7 @@ impl EnvHistDaemon {
             }
             EnvEvent::GetSession { pid } => {
                 match Self::get_or_create_session(pid, sessions).await {
-                    Ok(session) => EnvResponse::Session {
-                        session_id: session.id.to_string(),
-                    },
+                    Ok(session) => EnvResponse::Session { session },
                     Err(e) => EnvResponse::Error {
                         message: format!("Failed to get session: {}", e),
                     },

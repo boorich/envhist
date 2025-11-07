@@ -1,19 +1,24 @@
+use crate::daemon_client;
 use anyhow::Result;
 use colored::*;
 use envhist_core::{
     differ::{diff_envs, EnvDiff},
     storage::Storage,
 };
+use std::process;
 
 pub fn diff(snapshot1: Option<String>, snapshot2: Option<String>) -> Result<()> {
     let storage = Storage::new()?;
+    let session = daemon_client::get_session(process::id()).ok().flatten();
+
+    let session_ref = session.as_ref();
 
     let (old_env, old_name) = if let Some(ref name) = snapshot1 {
-        let snapshot = storage.load_snapshot(name, None)?;
+        let snapshot = storage.load_snapshot(name, session_ref)?;
         (snapshot.environment, name.clone())
     } else {
         // Use last snapshot
-        let snapshots = storage.list_snapshots(None)?;
+        let snapshots = storage.list_snapshots(session_ref)?;
         if snapshots.is_empty() {
             anyhow::bail!("No snapshots found. Create one with: envhist snapshot <name>");
         }
@@ -22,7 +27,7 @@ pub fn diff(snapshot1: Option<String>, snapshot2: Option<String>) -> Result<()> 
     };
 
     let (new_env, new_name) = if let Some(ref name) = snapshot2 {
-        let snapshot = storage.load_snapshot(name, None)?;
+        let snapshot = storage.load_snapshot(name, session_ref)?;
         (snapshot.environment, name.clone())
     } else {
         // Use current env

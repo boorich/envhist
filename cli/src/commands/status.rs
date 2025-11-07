@@ -1,12 +1,15 @@
+use crate::daemon_client;
 use anyhow::Result;
 use envhist_core::{differ::diff_envs, storage::Storage};
+use std::process;
 
 pub fn status() -> Result<()> {
     let storage = Storage::new()?;
     let current_env = Storage::get_current_env();
+    let session = daemon_client::get_session(process::id()).ok().flatten();
 
     // Try to get last snapshot
-    let snapshots = storage.list_snapshots(None)?;
+    let snapshots = storage.list_snapshots(session.as_ref())?;
 
     if snapshots.is_empty() {
         println!("No snapshots found. Create one with: envhist snapshot <name>");
