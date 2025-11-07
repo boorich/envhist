@@ -55,12 +55,7 @@ enum Commands {
         name: String,
     },
     /// Show differences between environments
-    Diff {
-        /// First snapshot (or current if not provided)
-        snapshot1: Option<String>,
-        /// Second snapshot (or current if not provided)
-        snapshot2: Option<String>,
-    },
+    Diff(DiffArgs),
     /// Daemon management
     Daemon {
         #[command(subcommand)]
@@ -103,10 +98,7 @@ fn main() -> Result<()> {
         Commands::Status => commands::status::status(),
         Commands::Log { since, grep } => commands::log::log(since, grep),
         Commands::Show { name } => commands::log::show(name),
-        Commands::Diff {
-            snapshot1,
-            snapshot2,
-        } => commands::diff::diff(snapshot1, snapshot2),
+        Commands::Diff(args) => commands::diff::diff(args),
         Commands::Daemon { action } => match action {
             DaemonCommand::Start => commands::init::start_daemon(),
             DaemonCommand::Stop => commands::init::stop_daemon(),
@@ -130,4 +122,17 @@ pub struct SnapshotArgs {
     /// Store snapshot only for the current session
     #[arg(long)]
     pub session: bool,
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct DiffArgs {
+    /// First snapshot (defaults to latest)
+    #[arg()]
+    pub snapshot1: Option<String>,
+    /// Second snapshot (defaults to current env)
+    #[arg()]
+    pub snapshot2: Option<String>,
+    /// Print ready-to-run commands to restore snapshot values
+    #[arg(long)]
+    pub exports: bool,
 }

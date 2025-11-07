@@ -1,4 +1,4 @@
-use crate::daemon_client;
+use crate::{daemon_client, DiffArgs};
 use anyhow::Result;
 use colored::*;
 use envhist_core::{
@@ -6,13 +6,13 @@ use envhist_core::{
     storage::Storage,
 };
 
-pub fn diff(snapshot1: Option<String>, snapshot2: Option<String>) -> Result<()> {
+pub fn diff(args: DiffArgs) -> Result<()> {
     let storage = Storage::new()?;
     let session = daemon_client::get_active_session().ok().flatten();
 
     let session_ref = session.as_ref();
 
-    let (old_env, old_name) = if let Some(ref name) = snapshot1 {
+    let (old_env, old_name) = if let Some(ref name) = args.snapshot1 {
         let snapshot = storage.load_snapshot(name, session_ref)?;
         (snapshot.environment, name.clone())
     } else {
@@ -25,7 +25,7 @@ pub fn diff(snapshot1: Option<String>, snapshot2: Option<String>) -> Result<()> 
         (snapshot.environment.clone(), snapshot.name.clone())
     };
 
-    let (new_env, new_name) = if let Some(ref name) = snapshot2 {
+    let (new_env, new_name) = if let Some(ref name) = args.snapshot2 {
         let snapshot = storage.load_snapshot(name, session_ref)?;
         (snapshot.environment, name.clone())
     } else {
@@ -41,6 +41,16 @@ pub fn diff(snapshot1: Option<String>, snapshot2: Option<String>) -> Result<()> 
 
     let output = format_diff_colored(&diffs, false);
     print!("{}", output);
+
+    if args.exports {
+        let commands = exports_for_diffs(&diffs);
+        if !commands.is_empty() {
+            println!("\n# Commands to restore snapshot values");
+            for command in commands {
+                println!("{}", command);
+            }
+        }
+    }
 
     Ok(())
 }
@@ -88,4 +98,30 @@ fn format_diff_colored(diffs: &[EnvDiff], show_unchanged: bool) -> String {
     }
 
     output
+}
+
+fn exports_for_diffs(diffs: &[EnvDiff]) -> Vec<String> {
+    let mut commands = Vec::new();
+
+    for diff in diffs {
+        match diff {
+            EnvDiff::Removed { key, old_value } => {
+                commands.push(export_line(key, old_value));
+            }
+            EnvDiff::Changed { key, old_value, .. } => {
+                commands.push(export_line(key, old_value));
+            }
+            EnvDiff::Added { key, .. } => {
+                commands.push(format!("unset {}", key));
+            }
+            EnvDiff::Unchanged { .. } => {}
+        }
+    }
+
+    commands
+}
+
+fn export_line(key: &str, value: &str) -> String {
+    let escaped = value.replace('"', "\\\"");
+    format!("export {}=\"{}\"", key, escaped)
 }

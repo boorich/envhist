@@ -21,6 +21,7 @@ Git-style history for shell environment variables. `envhist` runs a lightweight 
    envhist list                # show snapshots for this session
    envhist status              # compare current env vs last snapshot
    envhist diff snap-a snap-b  # diff any two snapshots (defaults to current)
+   envhist diff snap-a --exports  # show exports/unsets to restore snapshot
    envhist restore snap-a      # apply snapshot (prints exports for your shell)
    envhist log                 # timeline of tracked changes
    envhist show VAR_NAME       # history for a single variable
