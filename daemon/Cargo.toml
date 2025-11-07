@@ -1,0 +1,26 @@
+[package]
+name = "envhist-daemon"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "envhist-daemon"
+path = "src/main.rs"
+
+[lib]
+name = "envhist_daemon"
+path = "src/lib.rs"
+
+[dependencies]
+envhist-core = { path = "../core" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+dirs = { workspace = true }
+chrono = { workspace = true }
+

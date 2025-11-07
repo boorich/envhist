@@ -1,0 +1,21 @@
+# Build artifacts
+target/
+
+# Cargo metadata
+**/Cargo.lock
+
+# IDE & editor junk
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Rust analyzer / tooling caches
+*.iml
+.rustc_info.json
+
+# Generated binaries or logs
+*.log
+
+# envhist runtime data
+~/.envhist/

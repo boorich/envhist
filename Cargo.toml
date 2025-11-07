@@ -1,0 +1,23 @@
+[workspace]
+members = ["core", "daemon", "cli"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["envhist contributors"]
+license = "MIT"
+
+[workspace.dependencies]
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+clap = { version = "4.4", features = ["derive"] }
+anyhow = "1.0"
+thiserror = "1.0"
+dirs = "5.0"
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.10"
+colored = "2.1"
+
