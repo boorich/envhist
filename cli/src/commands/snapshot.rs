@@ -2,10 +2,9 @@ use crate::daemon_client;
 use anyhow::Result;
 use chrono::Utc;
 use envhist_core::{session::Session, storage::Snapshot, storage::Storage};
-use std::process;
 
 fn current_session() -> Option<Session> {
-    daemon_client::get_session(process::id()).ok().flatten()
+    daemon_client::get_active_session().ok().flatten()
 }
 
 pub fn snapshot(name: Option<String>, description: Option<String>) -> Result<()> {

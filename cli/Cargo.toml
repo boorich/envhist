@@ -22,4 +22,5 @@ dirs = { workspace = true }
 chrono = { workspace = true }
 colored = { workspace = true }
 uuid = { workspace = true }
+libc = { workspace = true }
 

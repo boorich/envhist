@@ -1,12 +1,11 @@
 use crate::daemon_client;
 use anyhow::Result;
 use envhist_core::{differ::diff_envs, storage::Storage};
-use std::process;
 
 pub fn status() -> Result<()> {
     let storage = Storage::new()?;
     let current_env = Storage::get_current_env();
-    let session = daemon_client::get_session(process::id()).ok().flatten();
+    let session = daemon_client::get_active_session().ok().flatten();
 
     // Try to get last snapshot
     let snapshots = storage.list_snapshots(session.as_ref())?;

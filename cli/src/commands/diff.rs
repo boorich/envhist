@@ -5,11 +5,10 @@ use envhist_core::{
     differ::{diff_envs, EnvDiff},
     storage::Storage,
 };
-use std::process;
 
 pub fn diff(snapshot1: Option<String>, snapshot2: Option<String>) -> Result<()> {
     let storage = Storage::new()?;
-    let session = daemon_client::get_session(process::id()).ok().flatten();
+    let session = daemon_client::get_active_session().ok().flatten();
 
     let session_ref = session.as_ref();
 

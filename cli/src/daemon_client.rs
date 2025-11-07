@@ -5,6 +5,15 @@ use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
 
+fn shell_pid() -> Option<u32> {
+    let ppid = unsafe { libc::getppid() };
+    if ppid > 0 {
+        Some(ppid as u32)
+    } else {
+        None
+    }
+}
+
 pub fn send_event(event: EnvEvent) -> Result<Option<EnvResponse>> {
     let socket_path = Config::daemon_socket_path();
 
@@ -47,4 +56,14 @@ pub fn get_session(pid: u32) -> Result<Option<Session>> {
         }
         _ => Ok(None),
     }
+}
+
+pub fn get_active_session() -> Result<Option<Session>> {
+    if let Some(shell_pid) = shell_pid() {
+        if let Some(session) = get_session(shell_pid)? {
+            return Ok(Some(session));
+        }
+    }
+
+    get_session(std::process::id())
 }

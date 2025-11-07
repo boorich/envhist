@@ -111,6 +111,10 @@ pub fn show(var_name: String) -> Result<()> {
 }
 
 fn get_session_for_pid(pid: u32) -> Result<Session> {
+    if let Ok(Some(session)) = daemon_client::get_active_session() {
+        return Ok(session);
+    }
+
     if let Ok(Some(session)) = daemon_client::get_session(pid) {
         return Ok(session);
     }
